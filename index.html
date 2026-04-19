@@ -3,153 +3,100 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Cảnh Báo Tốc Độ GPS</title>
+    <title>GPS Speedometer Pro</title>
     <style>
-        :root { --bg: #0f172a; --card: #1e293b; --text: #f8fafc; --primary: #22c55e; --danger: #ef4444; --warning: #f59e0b; }
-        body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
-        .container { background: var(--card); width: 85%; max-width: 400px; padding: 25px; border-radius: 30px; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.5); border: 2px solid #334155; transition: all 0.3s; }
-        
-        /* Hiệu ứng khi quá tốc độ */
-        .warning-active { border-color: var(--danger); animation: shake 0.2s infinite, flash 0.5s infinite; }
-        @keyframes flash { 0%, 100% { background: var(--card); } 50% { background: #450a0a; } }
-        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(4px); } 75% { transform: translateX(-4px); } }
-
-        #speed { font-size: 110px; font-weight: 900; color: var(--primary); margin: 5px 0; font-variant-numeric: tabular-nums; }
-        .unit { font-size: 14px; color: #94a3b8; text-transform: uppercase; letter-spacing: 3px; font-weight: bold; }
-        
-        .admin-panel { margin: 25px 0; padding-top: 15px; border-top: 1px solid #334155; }
-        input { background: #0f172a; border: 1px solid #334155; color: white; padding: 12px; border-radius: 12px; font-size: 22px; text-align: center; width: 90px; font-weight: bold; }
-        
-        .btn-group { display: flex; flex-direction: column; gap: 10px; }
-        button { border: none; padding: 16px; border-radius: 16px; font-weight: bold; font-size: 16px; cursor: pointer; transition: 0.2s; text-transform: uppercase; }
-        
-        .btn-gps { background: var(--warning); color: #451a03; }
-        .btn-start { background: var(--primary); color: #052e16; }
-        .btn-stop { background: var(--danger); color: white; display: none; }
-        
-        #status { font-size: 13px; color: #64748b; margin-top: 20px; min-height: 1.5em; }
+        :root { --bg: #0f0f0f; --card: #1a1a1a; --text: #eee; --primary: #00ff88; --danger: #ff3e3e; }
+        body { font-family: 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); margin: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; }
+        .container { text-align: center; background: var(--card); padding: 40px; border-radius: 40px; box-shadow: 0 0 20px rgba(0,0,0,0.5); width: 80%; border: 1px solid #333; }
+        .warning-mode { background: #300 !important; border-color: var(--danger) !important; animation: blink 0.6s infinite; }
+        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+        #speed { font-size: 130px; font-weight: 900; color: var(--primary); margin: 0; line-height: 1; }
+        .unit { font-size: 20px; color: #777; margin-bottom: 20px; }
+        .admin { margin-top: 20px; font-size: 16px; border-top: 1px solid #333; padding-top: 20px; }
+        input { background: #222; border: 1px solid #444; color: #fff; padding: 10px; border-radius: 10px; width: 60px; text-align: center; font-size: 18px; }
+        #log { font-size: 12px; color: #ffa500; margin-top: 15px; height: 20px; }
+        button { background: var(--primary); color: #000; border: none; padding: 20px; border-radius: 20px; width: 100%; font-weight: bold; font-size: 20px; margin-top: 20px; box-shadow: 0 5px 15px rgba(0,255,136,0.3); }
     </style>
 </head>
 <body>
 
-    <div class="container" id="appBox">
-        <div class="unit">Tốc độ hiện tại</div>
+    <div class="container" id="app">
+        <div class="unit">TỐC ĐỘ HIỆN TẠI</div>
         <div id="speed">0</div>
-        <div class="unit">km/h</div>
+        <div class="unit">KM/H</div>
 
-        <div class="admin-panel">
-            <span style="color: #94a3b8;">Giới hạn:</span>
-            <input type="number" id="limitInput" value="50" min="1" max="200">
+        <div class="admin">
+            GIỚI HẠN: <input type="number" id="limit" value="50">
         </div>
 
-        <div class="btn-group">
-            <button id="gpsBtn" class="btn-gps" onclick="requestGPS()">1. Cấp quyền GPS</button>
-            <button id="startBtn" class="btn-start" onclick="startMonitoring()">2. Bắt đầu giám sát</button>
-            <button id="stopBtn" class="btn-stop" onclick="stopMonitoring()">Dừng lại</button>
-        </div>
-        
-        <div id="status">Vui lòng bấm nút 1 để bắt đầu</div>
+        <button id="btn" onclick="initSystem()">KÍCH HOẠT HỆ THỐNG</button>
+        <div id="log">Chưa bật GPS</div>
     </div>
 
     <script>
         let limit = 50;
+        let isWarning = false;
         let watchID = null;
-        let tingInterval = null;
-        let audioCtx = null;
 
-        // Hàm tạo tiếng Ting Ting bằng tần số âm thanh
-        function playTing() {
-            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(1000, audioCtx.currentTime); // Tần số 1000Hz
-            
-            gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
-            
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
-            
-            osc.start();
-            osc.stop(audioCtx.currentTime + 0.4);
-        }
-
-        // Đọc thông báo tiếng Việt
         function speak(text) {
             window.speechSynthesis.cancel();
             const msg = new SpeechSynthesisUtterance(text);
             msg.lang = 'vi-VN';
+            msg.rate = 1.1;
             window.speechSynthesis.speak(msg);
         }
 
-        // Bước 1: Xin quyền GPS
-        function requestGPS() {
-            document.getElementById('status').innerText = "Đang xin quyền...";
-            navigator.geolocation.getCurrentPosition(
-                (p) => {
-                    document.getElementById('status').innerText = "✅ GPS đã sẵn sàng";
-                    document.getElementById('gpsBtn').style.background = "#334155";
-                    document.getElementById('gpsBtn').style.color = "#94a3b8";
-                    speak("Cấp quyền thành công");
-                },
-                (err) => {
-                    document.getElementById('status').innerText = "❌ Lỗi: Cần bật vị trí trên máy";
-                    alert("Hãy bật GPS trong cài đặt điện thoại!");
-                }
-            );
-        }
-
-        // Bước 2: Bắt đầu chạy
-        function startMonitoring() {
-            limit = parseFloat(document.getElementById('limitInput').value);
-            
-            // Ẩn nút cũ, hiện nút dừng
-            document.getElementById('gpsBtn').style.display = 'none';
-            document.getElementById('startBtn').style.display = 'none';
-            document.getElementById('stopBtn').style.display = 'block';
-            document.getElementById('status').innerText = "🛰️ Đang tìm vệ tinh...";
-
-            speak("Bắt đầu giám sát tốc độ " + limit);
+        function initSystem() {
+            limit = parseFloat(document.getElementById('limit').value);
+            document.getElementById('btn').style.display = 'none';
+            document.getElementById('log').innerText = "Đang tìm vệ tinh...";
+            speak("Hệ thống đã bật");
 
             if ("geolocation" in navigator) {
-                watchID = navigator.geolocation.watchPosition((pos) => {
-                    // Chuyển m/s sang km/h
-                    let speedKmh = pos.coords.speed ? Math.round(pos.coords.speed * 3.6) : 0;
-                    
-                    // Cập nhật giao diện
-                    document.getElementById('speed').innerText = speedKmh;
-                    document.getElementById('status').innerText = "Đang chạy (Sai số: " + Math.round(pos.coords.accuracy) + "m)";
+                // Tùy chọn quan trọng để GPS chạy mượt trên Mobile
+                const geoOptions = {
+                    enableHighAccuracy: true, // Ép dùng GPS vệ tinh thay vì Wifi/Cell Tower
+                    timeout: 5000,            // Chờ tối đa 5s để nhận tín hiệu
+                    maximumAge: 0             // Không dùng dữ liệu cũ trong bộ nhớ đệm
+                };
 
-                    // Kiểm tra quá tốc độ
-                    if (speedKmh > limit) {
-                        if (!tingInterval) {
-                            document.getElementById('appBox').classList.add('warning-active');
-                            document.getElementById('speed').style.color = 'var(--danger)';
-                            speak("xin giảm tốc độ");
-                            tingInterval = setInterval(playTing, 600); // Kêu mỗi 0.6 giây
-                        }
-                    } else {
-                        document.getElementById('appBox').classList.remove('warning-active');
-                        document.getElementById('speed').style.color = 'var(--primary)';
-                        clearInterval(tingInterval);
-                        tingInterval = null;
-                    }
-                }, (err) => {
-                    document.getElementById('status').innerText = "❌ Mất tín hiệu GPS";
-                }, {
-                    enableHighAccuracy: true,
-                    maximumAge: 0
-                });
+                watchID = navigator.geolocation.watchPosition(updateSpeed, handleError, geoOptions);
+            } else {
+                alert("Thiết bị không hỗ trợ GPS");
             }
         }
 
-        // Bước 3: Dừng
-        function stopMonitoring() {
-            if (watchID) navigator.geolocation.clearWatch(watchID);
-            clearInterval(tingInterval);
-            location.reload(); // Reset toàn bộ ứng dụng
+        function updateSpeed(pos) {
+            // Lấy tốc độ (đơn vị m/s)
+            let rawSpeed = pos.coords.speed; 
+            
+            // Một số dòng Android trả về null nếu tốc độ quá thấp
+            let kmh = (rawSpeed && rawSpeed > 0) ? Math.round(rawSpeed * 3.6) : 0;
+            
+            document.getElementById('speed').innerText = kmh;
+            document.getElementById('log').innerText = "Tín hiệu: Tốt";
+
+            if (kmh > limit) {
+                if (!isWarning) {
+                    document.getElementById('app').classList.add('warning-mode');
+                    speak("xin giảm tốc độ");
+                    isWarning = true;
+                }
+            } else {
+                document.getElementById('app').classList.remove('warning-mode');
+                isWarning = false;
+            }
+        }
+
+        function handleError(err) {
+            let errorMsg = "";
+            switch(err.code) {
+                case 1: errorMsg = "Lỗi: Bạn chưa Cho Phép quyền Vị trí."; break;
+                case 2: errorMsg = "Lỗi: Không bắt được sóng GPS (Hãy ra ngoài trời)."; break;
+                case 3: errorMsg = "Lỗi: Mất quá nhiều thời gian để lấy vị trí."; break;
+                default: errorMsg = "Lỗi không xác định."; break;
+            }
+            document.getElementById('log').innerText = errorMsg;
         }
     </script>
 </body>
