@@ -3,23 +3,114 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Hệ Thống Giám Sát Tốc Độ</title>
+    <title>Hệ Thống Cảnh Báo Tốc Độ</title>
     <style>
-        :root { --bg: #0f172a; --card: #1e293b; --text: #f8fafc; --primary: #10b981; --danger: #ef4444; --accent: #3b82f6; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
-        .container { text-align: center; background: var(--card); padding: 30px; border-radius: 24px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.3); width: 90%; max-width: 400px; border: 1px solid #334155; }
-        .warning-active { background: #450a0a !important; border-color: var(--danger) !important; animation: pulse 0.8s infinite; }
-        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.8; } 100% { opacity: 1; } }
-        #speed { font-size: 100px; font-weight: 800; color: var(--primary); margin: 10px 0; line-height: 1; }
-        .label { font-size: 14px; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; }
-        .admin-panel { margin: 20px 0; padding: 15px; background: rgba(0,0,0,0.2); border-radius: 12px; }
-        input { background: #0f172a; border: 1px solid #334155; color: white; padding: 8px; border-radius: 8px; width: 60px; text-align: center; font-size: 18px; }
-        .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; }
-        button { padding: 12px; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; transition: 0.2s; }
-        #startBtn { background: var(--primary); color: white; grid-column: span 2; font-size: 18px; }
-        #checkBtn { background: var(--accent); color: white; }
+        :root { 
+            --bg: #0f172a; 
+            --card: #1e293b; 
+            --text: #f8fafc; 
+            --primary: #10b981; 
+            --danger: #ef4444; 
+            --warning: #f59e0b; 
+        }
+        
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background: var(--bg); 
+            color: var(--text); 
+            margin: 0; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            height: 100vh; 
+            overflow: hidden;
+        }
+
+        .container { 
+            text-align: center; 
+            background: var(--card); 
+            padding: 30px; 
+            border-radius: 28px; 
+            width: 85%; 
+            max-width: 400px; 
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+            border: 1px solid #334155;
+            transition: all 0.3s ease;
+        }
+
+        /* Hiệu ứng nháy đỏ khi quá tốc độ */
+        .warning-active { 
+            background: #450a0a !important; 
+            border-color: var(--danger) !important; 
+            animation: shake 0.3s infinite;
+        }
+
+        @keyframes shake {
+            0% { transform: translate(1px, 1px); }
+            50% { transform: translate(-1px, -1px); }
+            100% { transform: translate(1px, -1px); }
+        }
+
+        #speed { 
+            font-size: 110px; 
+            font-weight: 900; 
+            color: var(--primary); 
+            margin: 5px 0;
+            line-height: 1;
+        }
+
+        .label { font-size: 14px; color: #94a3b8; text-transform: uppercase; letter-spacing: 2px; }
+
+        .admin-panel { 
+            margin: 20px 0; 
+            padding: 15px; 
+            background: rgba(15, 23, 42, 0.5); 
+            border-radius: 15px;
+            font-size: 16px;
+        }
+
+        input { 
+            background: #0f172a; 
+            border: 1px solid #334155; 
+            color: white; 
+            padding: 8px; 
+            border-radius: 8px; 
+            width: 60px; 
+            text-align: center; 
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .btn-group { display: flex; flex-direction: column; gap: 10px; }
+
+        button { 
+            padding: 16px; 
+            border: none; 
+            border-radius: 16px; 
+            font-weight: bold; 
+            font-size: 16px; 
+            cursor: pointer; 
+            transition: 0.2s;
+        }
+
+        #startBtn { background: var(--primary); color: white; }
         #stopBtn { background: var(--danger); color: white; display: none; }
-        #debugInfo { margin-top: 15px; font-family: monospace; font-size: 11px; color: #94a3b8; text-align: left; background: #0f172a; padding: 10px; border-radius: 8px; display: none; }
+        
+        /* Nút bật quyền định vị thông minh */
+        #fixGpsBtn { 
+            background: var(--warning); 
+            color: #000; 
+            display: none; 
+            animation: pulse-warn 1s infinite;
+        }
+
+        @keyframes pulse-warn {
+            0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7); }
+            70% { box-shadow: 0 0 0 15px rgba(245, 158, 11, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+        }
+
+        #status { margin-top: 15px; font-size: 12px; min-height: 18px; color: #64748b; }
     </style>
 </head>
 <body>
@@ -30,95 +121,116 @@
         <div class="label">km/h</div>
 
         <div class="admin-panel">
-            <label>Giới hạn Admin:</label>
-            <input type="number" id="limitVal" value="50">
+            Giới hạn Admin: <input type="number" id="limitInput" value="50">
         </div>
 
-        <div class="controls">
-            <button id="startBtn" onclick="startSystem()">BẮT ĐẦU CHẠY</button>
-            <button id="checkBtn" onclick="toggleDebug()">KIỂM TRA GPS</button>
-            <button id="stopBtn" onclick="stopSystem()">KẾT THÚC</button>
+        <div class="btn-group">
+            <button id="startBtn" onclick="initApp()">BẮT ĐẦU GIÁM SÁT</button>
+            <button id="fixGpsBtn" onclick="reconnectGPS()">BẬT QUYỀN ĐỊNH VỊ NGAY</button>
+            <button id="stopBtn" onclick="stopApp()">KẾT THÚC</button>
         </div>
 
-        <div id="debugInfo">Đang chờ dữ liệu...</div>
+        <div id="status">Chưa kích hoạt GPS</div>
     </div>
 
     <script>
         let watchID = null;
         let isWarning = false;
-        let showDebug = false;
+        let gpsTimer = null;
 
         function speak(text) {
             window.speechSynthesis.cancel();
             const msg = new SpeechSynthesisUtterance(text);
             msg.lang = 'vi-VN';
+            msg.rate = 1.1; // Tốc độ nói hơi nhanh để cảnh báo kịp thời
             window.speechSynthesis.speak(msg);
         }
 
-        function toggleDebug() {
-            showDebug = !showDebug;
-            document.getElementById('debugInfo').style.display = showDebug ? 'block' : 'none';
-        }
-
-        function startSystem() {
-            if (!("geolocation" in navigator)) {
-                alert("Trình duyệt không hỗ trợ GPS!");
-                return;
-            }
-
-            speak("Bắt đầu giám sát tốc độ");
+        function initApp() {
+            // Thay đổi giao diện nút
             document.getElementById('startBtn').style.display = 'none';
             document.getElementById('stopBtn').style.display = 'block';
+            document.getElementById('status').innerText = "Đang tìm tín hiệu GPS...";
+            
+            speak("Bắt đầu giám sát");
 
-            watchID = navigator.geolocation.watchPosition((pos) => {
-                const rawSpeed = pos.coords.speed; // m/s
-                const kmh = (rawSpeed && rawSpeed > 0) ? Math.round(rawSpeed * 3.6) : 0;
-                const limit = parseFloat(document.getElementById('limitVal').value);
-
-                // Cập nhật giao diện
-                document.getElementById('speed').innerText = kmh;
-                
-                // Hiển thị thông số GPS chi tiết (Debug)
-                document.getElementById('debugInfo').innerHTML = `
-                    Vĩ độ: ${pos.coords.latitude.toFixed(5)}<br>
-                    Kinh độ: ${pos.coords.longitude.toFixed(5)}<br>
-                    Độ chính xác: ${pos.coords.accuracy.toFixed(1)}m<br>
-                    Raw Speed: ${rawSpeed} m/s
-                `;
-
-                // Xử lý cảnh báo
-                if (kmh > limit) {
-                    if (!isWarning) {
-                        document.getElementById('mainBox').classList.add('warning-active');
-                        document.getElementById('speed').style.color = '#ff4444';
-                        speak("xin giảm tốc độ");
-                        isWarning = true;
-                    }
-                } else {
-                    document.getElementById('mainBox').classList.remove('warning-active');
-                    document.getElementById('speed').style.color = '#10b981';
-                    isWarning = false;
+            // Sau 10 giây nếu tốc độ vẫn bằng 0, hiện nút Fix GPS
+            gpsTimer = setTimeout(() => {
+                if (document.getElementById('speed').innerText === "0") {
+                    document.getElementById('fixGpsBtn').style.display = 'block';
+                    document.getElementById('status').innerText = "Vui lòng cho phép quyền vị trí!";
+                    document.getElementById('status').style.color = "#f59e0b";
+                    speak("Vui lòng bật quyền định vị");
                 }
-            }, (err) => {
-                document.getElementById('debugInfo').innerText = "Lỗi GPS: " + err.message;
-            }, {
-                enableHighAccuracy: true,
-                maximumAge: 0,
-                timeout: 5000
-            });
+            }, 10000);
+
+            reconnectGPS();
         }
 
-        function stopSystem() {
+        function reconnectGPS() {
+            if (watchID) navigator.geolocation.clearWatch(watchID);
+
+            const options = {
+                enableHighAccuracy: true,
+                timeout: 8000,
+                maximumAge: 0
+            };
+
+            watchID = navigator.geolocation.watchPosition((pos) => {
+                // Nếu nhận được dữ liệu thành công
+                clearTimeout(gpsTimer);
+                document.getElementById('fixGpsBtn').style.display = 'none';
+                document.getElementById('status').innerText = "Tín hiệu: Ổn định";
+                document.getElementById('status').style.color = "#10b981";
+
+                const rawSpeed = pos.coords.speed; // đơn vị m/s
+                const kmh = (rawSpeed && rawSpeed > 0) ? Math.round(rawSpeed * 3.6) : 0;
+                
+                document.getElementById('speed').innerText = kmh;
+                checkSpeed(kmh);
+            }, (err) => {
+                document.getElementById('status').innerText = "Lỗi GPS: " + err.message;
+                document.getElementById('status').style.color = "#ef4444";
+            }, options);
+        }
+
+        function checkSpeed(kmh) {
+            const limit = parseFloat(document.getElementById('limitInput').value);
+            const mainBox = document.getElementById('mainBox');
+            const speedText = document.getElementById('speed');
+
+            if (kmh > limit) {
+                if (!isWarning) {
+                    mainBox.classList.add('warning-active');
+                    speedText.style.color = "#ff4444";
+                    speak("xin giảm tốc độ");
+                    isWarning = true;
+                }
+            } else {
+                mainBox.classList.remove('warning-active');
+                speedText.style.color = "#10b981";
+                isWarning = false;
+            }
+        }
+
+        function stopApp() {
             if (watchID) {
                 navigator.geolocation.clearWatch(watchID);
                 watchID = null;
             }
-            speak("Đã kết thúc hệ thống");
+            clearTimeout(gpsTimer);
+            
+            speak("Đã tắt hệ thống");
+            
+            // Reset giao diện
             document.getElementById('speed').innerText = "0";
+            document.getElementById('speed').style.color = "#10b981";
             document.getElementById('startBtn').style.display = 'block';
             document.getElementById('stopBtn').style.display = 'none';
+            document.getElementById('fixGpsBtn').style.display = 'none';
             document.getElementById('mainBox').classList.remove('warning-active');
-            document.getElementById('debugInfo').innerText = "Đã dừng.";
+            document.getElementById('status').innerText = "Hệ thống đã dừng.";
+            document.getElementById('status').style.color = "#64748b";
         }
     </script>
 </body>
