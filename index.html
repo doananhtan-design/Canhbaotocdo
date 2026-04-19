@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Cảnh Báo Tốc Độ</title>
+    <style>
+        :root { --bg: #121212; --card: #1e1e1e; --text: #ffffff; --primary: #00e676; --danger: #ff5252; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); margin: 0; display: flex; flex-direction: column; height: 100vh; justify-content: center; align-items: center; overflow: hidden; }
+        .container { text-align: center; width: 85%; max-width: 350px; padding: 30px; border-radius: 30px; background: var(--card); box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 2px solid #333; }
+        .warning-active { border-color: var(--danger); animation: blink 0.5s infinite; }
+        @keyframes blink { 0% { box-shadow: 0 0 10px var(--danger); } 50% { box-shadow: 0 0 40px var(--danger); } 100% { box-shadow: 0 0 10px var(--danger); } }
+        #speed { font-size: 100px; font-weight: 800; color: var(--primary); margin: 10px 0; }
+        .unit { font-size: 18px; color: #888; text-transform: uppercase; }
+        .admin-box { margin-top: 25px; padding-top: 20px; border-top: 1px solid #333; }
+        input { background: #333; border: none; color: white; padding: 10px; border-radius: 8px; width: 70px; font-size: 18px; text-align: center; margin-left: 10px; }
+        button { margin-top: 20px; background: var(--primary); color: black; border: none; padding: 15px; border-radius: 15px; font-weight: bold; font-size: 18px; width: 100%; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <div class="container" id="appBox">
+        <div class="unit">Tốc độ hiện tại</div>
+        <div id="speed">0</div>
+        <div class="unit">km/h</div>
+
+        <div class="admin-box">
+            <label>Giới hạn:</label>
+            <input type="number" id="limitInput" value="50">
+        </div>
+
+        <button id="startBtn" onclick="startTracking()">BẮT ĐẦU GIÁM SÁT</button>
+    </div>
+
+    <script>
+        let limit = 50;
+        let isSpeaking = false;
+
+        function speak() {
+            if (isSpeaking) return;
+            isSpeaking = true;
+            const msg = new SpeechSynthesisUtterance("xin giảm tốc độ");
+            msg.lang = 'vi-VN';
+            msg.onend = () => { isSpeaking = false; };
+            window.speechSynthesis.speak(msg);
+        }
+
+        function startTracking() {
+            limit = parseFloat(document.getElementById('limitInput').value);
+            document.getElementById('startBtn').innerText = "ĐANG CHẠY...";
+            document.getElementById('startBtn').style.background = "#555";
+            
+            // Kích hoạt âm thanh lần đầu
+            const initMsg = new SpeechSynthesisUtterance("Bắt đầu giám sát");
+            initMsg.lang = 'vi-VN';
+            window.speechSynthesis.speak(initMsg);
+
+            if ("geolocation" in navigator) {
+                navigator.geolocation.watchPosition((pos) => {
+                    const speedKmh = pos.coords.speed ? Math.round(pos.coords.speed * 3.6) : 0;
+                    document.getElementById('speed').innerText = speedKmh;
+
+                    if (speedKmh > limit) {
+                        document.getElementById('appBox').classList.add('warning-active');
+                        document.getElementById('speed').style.color = '#ff5252';
+                        speak();
+                    } else {
+                        document.getElementById('appBox').classList.remove('warning-active');
+                        document.getElementById('speed').style.color = '#00e676';
+                    }
+                }, (err) => alert("Lỗi GPS: Vui lòng bật vị trí"), { enableHighAccuracy: true });
+            }
+        }
+    </script>
+</body>
+</html>
